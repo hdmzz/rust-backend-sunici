@@ -1,2 +1,51 @@
 to run the project 
 cargo run
+
+
+la bbox pour les  coordonnees dans l'url http://localhost:8080/api/terrain_rgb?lat=45.7716768&lon=4.8376049&radius=5&zoom=15&units_side=10000:
+
+lat=45.7716768
+lon=4.8376049
+radius=5
+zoom=15
+{
+    "feature": {
+        "type": "Feature",
+        "geometry": {
+            "properties": {},
+            "type": "Polygon",
+            "coordinates": [
+                [
+                    [
+                        4.791994824271697,
+                        45.8034635062856
+                    ],
+                    [
+                        4.883163001289255,
+                        45.8034635062856
+                    ],
+                    [
+                        4.883163001289255,
+                        45.739871967118525
+                    ],
+                    [
+                        4.791994824271697,
+                        45.739871967118525
+                    ],
+                    [
+                        4.791994824271697,
+                        45.8034635062856
+                    ]
+                ]
+            ]
+        }
+    },
+    "northWest": [
+        4.791994824271697,
+        45.8034635062856
+    ],
+    "southEast": [
+        4.883163001289255,
+        45.739871967118525
+    ]
+}

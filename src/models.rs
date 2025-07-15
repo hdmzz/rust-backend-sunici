@@ -20,3 +20,27 @@ pub struct UserResponse {
     pub email: String,
     pub message: Option<String>,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Properties {}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Geometry {
+    pub properties: Properties,
+    #[serde(rename = "type")]
+    pub _type: String,
+    pub coordinates: Vec<Vec<Vec<f64>>>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct PolygonFeature {
+    #[serde(rename = "type")]
+    pub _type: String,
+    geometry : Geometry,
+}
+
+#[derive(Debug)]
+pub struct BoundingBox {
+    pub north_west: [f64; 2],
+    pub south_east: [f64; 2],
+}
