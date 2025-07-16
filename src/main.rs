@@ -1,16 +1,25 @@
+use actix_cors::Cors;
 use actix_web::{App, HttpServer};
 mod routes;
 mod handlers;
 mod models;
 mod rgb_model;
+mod projection;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     println!("Démarrage du serveur sur http://127.0.0.1:8080");
     
     HttpServer::new(|| {
+        let cors = Cors::default()
+            .allow_any_origin()    // Autorise les requêtes de n'importe quelle origine
+            .allow_any_method()    // Autorise toutes les méthodes HTTP (GET, POST, etc.)
+            .allow_any_header()    // Autorise tous les en-têtes HTTP
+            .max_age(3600);  
+
         App::new()
-            .configure(routes::config)
+        .wrap(cors)
+        .configure(routes::config)
     })
     .bind("127.0.0.1:8080")?
     .workers(1) 

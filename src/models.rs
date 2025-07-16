@@ -1,38 +1,11 @@
 use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct User {
-    pub id: u32,
-    pub name: String,
-    pub email: String,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct CreateUserRequest {
-    pub name: String,
-    pub email: String,
-}
-
-#[derive(Serialize, Debug)]
-pub struct UserResponse {
-    pub id: u32,
-    pub name: String,
-    pub email: String,
-    pub message: Option<String>,
-}
+use core::fmt;
+use std::fmt::{Display};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Properties {}
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Geometry {
-    pub properties: Properties,
-    #[serde(rename = "type")]
-    pub _type: String,
-    pub coordinates: Vec<Vec<Vec<f64>>>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct PolygonFeature {
     #[serde(rename = "type")]
     pub _type: String,
@@ -40,7 +13,77 @@ pub struct PolygonFeature {
 }
 
 #[derive(Debug)]
-pub struct BoundingBox {
+pub struct ProcessedTileData {
+    pub zoom_pos: [u32; 3],
+    pub vertex_array: Vec<f64>, // [x1, y1, z1, x2, y2, z2, ...]
+}
+
+#[derive(Debug, Serialize)]
+pub struct TerrainMesh {
+    pub vertices: Vec<f32>,
+    pub indices: Vec<u32>,
+    pub uvs: Vec<f32>,
+    pub satellite_texture_url: String,
+    pub zoom_pos: [u32; 3],
+}
+
+use serde_json::Value;
+
+#[derive(Deserialize, Debug)]
+pub struct TerrainRequest {
+    pub lat: f64,
+    pub lon: f64,
+    pub radius: f64,
+    pub zoom: u32,
+    pub units_per_meter: f64,
+    pub zoom_position_covered: Vec<Vec<u32>>,
+    pub bbox: Bbox,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Bbox {
+    pub feature: Feature,
+    // L'attribut `rename` est utilisé pour mapper les noms camelCase de JavaScript
+    // aux noms snake_case idiomatiques de Rust.
+    #[serde(rename = "northWest")]
     pub north_west: [f64; 2],
+    #[serde(rename = "southEast")]
     pub south_east: [f64; 2],
+}
+
+impl Display for Bbox {
+    fn fmt( &self, f: &mut fmt::Formatter<'_> ) -> fmt::Result {
+        match serde_json::to_string_pretty( self ) {
+            Ok( json_string ) => write!( f, "{}", json_string ),
+            Err( _ ) => write!( f, "Erreur lors de lla serialisation de la Bbox en JSON" ),
+        }
+    }
+}
+
+/// Représente l'objet `feature` dans `bbox`.
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Feature {
+    #[serde(rename = "type")]
+    pub feature_type: String,
+    pub geometry: Geometry,
+}
+
+/// Représente l'objet `geometry` dans `feature`.
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Geometry {
+    // `properties` est de type `Value` pour plus de flexibilité,
+    // car il est vide dans votre cas.
+    pub properties: Value,
+    #[serde(rename = "type")]
+    pub geometry_type: String,
+    // Les coordonnées d'un polygone GeoJSON.
+    pub coordinates: Vec<Vec<[f64; 2]>>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ApiResponse {
+    pub data: Vec<u8>,
+    pub offset: u8,
+    pub shape: [u8; 3],
+    pub stride: [u8; 3],
 }
