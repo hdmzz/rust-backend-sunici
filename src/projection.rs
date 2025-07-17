@@ -1,6 +1,5 @@
 use crate::models::Bbox;
 
-
 /// Projette des coordonnées géographiques (lon, lat) dans un système de coordonnées
 /// de scène 3D local défini par une Bbox et une taille de côté.
 /// C'est l'équivalent de `HugoGeo.projectCoord`.

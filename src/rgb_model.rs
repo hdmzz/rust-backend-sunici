@@ -1,34 +1,8 @@
 use actix_web::{error::ErrorInternalServerError, Error};
-use geo::{Destination, Haversine};
-use  geo_types::{Point};
 use crate::models::{ApiResponse, Bbox, TerrainRequest};
-use std::collections::HashMap;
-
+use std::{collections::HashMap, env};
+use futures::future::join_all;
 const CONST_VERTICES: usize = 128;
-
-//http://localhost:8080/api/terrain_rgb?lat=45.7716711&lon=4.8376036&radius=5&zoom=15&units_side=10000
-//point d'entrée du module
-pub fn get_terrain( params: &TerrainRequest ) {
-
-    //1 recuperer BBox
-    let bbox: &Bbox = &params.bbox;//la reference est utiliser si on ne lutilise pas cela creer une copie
-    //2 recuperer zoom position covered ==> les 81 tuiles .....
-    let zoom_position_covered: Vec<Vec<u32>> = params.zoom_position_covered.clone();
-    let zoom_position_elevation: Vec<Vec<u32>> = get_zoom_position_elevation(&zoom_position_covered);
-
-    println!("grandparents uniques: {:?}", zoom_position_elevation);
-}
-
-fn get_unit_per_meter( units_side: u32, radius: u32 ) -> f64 {
-    let units_side_f: f64 = units_side as f64;
-    let radius_f: f64 = radius as f64;
-
-    units_side_f / ( radius_f * 2.0_f64.sqrt()  * 1000.0 )
-}
-
-pub fn add_tile() {
-
-}
 
 pub fn get_zoom_position_elevation(zp_covered: &[Vec<u32>]) -> Vec<Vec<u32>> {
     // HashMap pour stocker les groupements. La clé est une chaîne de caractères représentant
@@ -72,7 +46,7 @@ pub fn get_zoom_position_elevation(zp_covered: &[Vec<u32>]) -> Vec<Vec<u32>> {
 }
 
 
-async fn fetch_data( url: &str ) -> Result<ApiResponse, Error> {
+async fn fetch_data( url: &String ) -> Result<ApiResponse, Error> {
     let response = reqwest::get(url)
         .await
         .map_err(ErrorInternalServerError)?;
@@ -81,4 +55,66 @@ async fn fetch_data( url: &str ) -> Result<ApiResponse, Error> {
         .await
         .map_err(ErrorInternalServerError)?;
     Ok(api_response)
+}
+
+pub struct RgbModel {
+    pub mapbox_token: String,
+    pub api_rgb: String,
+    pub data_elevation_covered: Vec<Vec<Vec<f64>>>,
+}
+
+impl RgbModel {
+
+    //http://localhost:8080/api/terrain_rgb?lat=45.7716711&lon=4.8376036&radius=5&zoom=15&units_side=10000
+    //point d'entrée du module
+    pub async fn get_terrain(&mut self, params: &TerrainRequest) {
+
+        //1 recuperer BBox
+        let bbox: &Bbox = &params.bbox;//la reference est utiliser si on ne lutilise pas cela creer une copie
+        //2 recuperer zoom position covered ==> les 81 tuiles .....
+        let zoom_position_covered: Vec<Vec<u32>> = params.zoom_position_covered.clone();
+        let zoom_position_elevation: Vec<Vec<u32>> = get_zoom_position_elevation(&zoom_position_covered);
+        self.fetch(&zoom_position_covered, bbox).await;
+
+        println!("grandparents uniques: {:?}", zoom_position_elevation);
+    }
+
+    pub async fn fetch( &mut self, zp_covered: &[Vec<u32>], bbox: &Bbox ) {
+        let zoom_position_elevation = get_zoom_position_elevation(zp_covered);
+
+        let fetch_futures = zoom_position_elevation.iter().map(|zoom_position| {
+            let url =self.get_uri(&zoom_position).clone();
+            println!("{:?}", url);
+            async move {
+                fetch_data(&url).await
+            }
+        });
+
+        let tiles_results = join_all(fetch_futures).await;
+
+        let new_data_segments = tiles_results
+        .into_iter()
+        .zip(zoom_position_elevation.iter())
+        .map(|(tile_result, zoom_pos)| {
+            let tile = tile_result.expect("Échec de la re cupération de la tuile");
+            self.add_tile(&tile, zoom_pos, zp_covered, bbox)
+        })
+        .flatten()
+        .collect::<Vec<_>>();
+    }
+
+    fn add_tile(&self, tile: &ApiResponse, zoom_pos: &Vec<u32>, zp_covered: &[Vec<u32>], bbox: &Bbox) -> Vec<i32> {
+        let mut ret = Vec::new();
+
+        ret.push(5);
+        ret
+    }
+
+    fn get_uri(&self, zoom_pos: &[u32]) -> String {
+        let [z, x, y] = zoom_pos else {
+            panic!("zoom_pos doit contenir exactement trois éléments : [z, x, y]");
+        };
+    
+        format!( "https://api.mapbox.com/v4/mapbox.terrain-rgb/{}/{}/{}@2x.pngraw?access_token={}", z, x, y, self.mapbox_token)
+    }
 }
