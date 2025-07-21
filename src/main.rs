@@ -5,6 +5,7 @@ mod handlers;
 mod models;
 mod rgb_model;
 mod projection;
+mod rgb_model_v2;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

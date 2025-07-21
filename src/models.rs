@@ -40,6 +40,14 @@ pub struct TerrainRequest {
     pub bbox: Bbox,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct TileRequest {
+    pub zoom_position: Vec<u32>,
+    pub zoom_position_covered: Vec<Vec<u32>>,
+    pub bbox: Bbox,
+    pub units_per_meter: f64,
+}
+
 #[derive(Serialize)]
 pub struct QuantizedTileData {
     pub zoom_pos: Vec<i32>,
