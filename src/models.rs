@@ -40,6 +40,27 @@ pub struct TerrainRequest {
     pub bbox: Bbox,
 }
 
+#[derive(Serialize)]
+pub struct QuantizedTileData {
+    pub zoom_pos: Vec<i32>,
+    pub parent_tile: Vec<u32>,
+    // Métadonnées pour la dé-quantification
+    pub min_x: f64,
+    pub min_y: f64,
+    pub min_z: f64,
+    pub scale_x: f64,
+    pub scale_y: f64,
+    pub scale_z: f64,
+    // Les sommets quantifiés et compressés seront dans le corps de la réponse binaire
+}
+
+#[derive(Serialize)]
+pub struct TileResponseData {
+   pub zoom_pos: Vec<i32>,
+   pub parent_tile: Vec<u32>,
+   pub vertices_base64: String,
+} 
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Bbox {
     pub feature: Feature,

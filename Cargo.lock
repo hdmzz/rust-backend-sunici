@@ -1881,7 +1881,10 @@ version = "0.1.0"
 dependencies = [
  "actix-cors",
  "actix-web",
+ "base64",
+ "byteorder",
  "bytes",
+ "flate2",
  "futures",
  "geo 0.30.0",
  "geo-types 0.7.16",

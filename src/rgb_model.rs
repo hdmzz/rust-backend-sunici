@@ -36,7 +36,7 @@ pub fn get_zoom_position_elevation(zp_covered: &[Vec<u32>]) -> Vec<Vec<u32>> {
 }
 
 
-async fn fetch_data( url: &String ) -> Result<Bytes, Error> {
+pub async fn fetch_data( url: &String ) -> Result<Bytes, Error> {
     let response = reqwest::get(url)
         .await
         .map_err(ErrorInternalServerError)?;
@@ -87,21 +87,20 @@ impl RgbModel {
 
     //http://localhost:8080/api/terrain_rgb?lat=45.7716711&lon=4.8376036&radius=5&zoom=15&units_side=10000
     //point d'entrée du module
-    pub async fn get_terrain(&mut self, params: &TerrainRequest) {
+    pub async fn get_terrain(&mut self, params: &TerrainRequest) -> Vec<(Vec<i32>, Vec<f64>, Vec<u32>)> {
 
         //1 recuperer BBox
         let bbox: &Bbox = &params.bbox;//la reference est utiliser si on ne lutilise pas cela creer une copie
         //2 recuperer zoom position covered ==> les 81 tuiles .....
         let zoom_position_covered: Vec<Vec<u32>> = params.zoom_position_covered
         .clone();
-        let zoom_position_elevation: Vec<Vec<u32>> = get_zoom_position_elevation(&zoom_position_covered);
 
-        self.fetch(&zoom_position_covered, bbox).await;
+        let  ret: Vec<(Vec<i32>, Vec<f64>, Vec<u32>)> = self.fetch(&zoom_position_covered, bbox).await;
 
-        println!("grandparents uniques: {:?}", zoom_position_elevation);
+        ret
     }
 
-    pub async fn fetch( &mut self, zp_covered: &[Vec<u32>], bbox: &Bbox ) {
+    pub async fn fetch( &mut self, zp_covered: &[Vec<u32>], bbox: &Bbox ) -> Vec<(Vec<i32>, Vec<f64>, Vec<u32>)> {
         let zoom_position_elevation = get_zoom_position_elevation(zp_covered);
 
         let fetch_futures = zoom_position_elevation
@@ -116,7 +115,7 @@ impl RgbModel {
 
         let tiles_results = join_all(fetch_futures).await;
 
-        let new_data_segments = tiles_results
+        let new_data_segments: Vec<(Vec<i32>, Vec<f64>, Vec<u32>)> = tiles_results
         .into_iter()
         .zip(zoom_position_elevation.iter())
         .map(|(tile_result, zoom_pos)| {
@@ -126,7 +125,7 @@ impl RgbModel {
         .flatten()
         .collect::<Vec<_>>();
 
-        println!("{:?}", new_data_segments);
+        new_data_segments
     }
 
     fn add_tile(&self, tile_bytes: &Bytes, zoom_position_elevation: &Vec<u32>, zp_covered: &[Vec<u32>], bbox: &Bbox) -> Vec<(Vec<i32>, Vec<f64>, Vec<u32>)> {
@@ -199,6 +198,7 @@ impl RgbModel {
                     data_index += 1;
                 }
             }
+
             data_elevation.push((zoom_pos, array, zoom_position_elevation.clone()));
         };
             
