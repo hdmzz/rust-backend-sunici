@@ -1,5 +1,5 @@
 use actix_web::{post, web, HttpResponse, Responder, http::header};
-use crate::models::{QuantizedTileData, TerrainRequest, TileRequest};
+use crate::models::{TileRequest};
 //use crate::rgb_model::{RgbModel};
 use crate::rgb_model_v2::{add_tile_v2, get_pixels, get_url};
 use byteorder::{LittleEndian, WriteBytesExt};
@@ -82,7 +82,44 @@ pub async fn get_tile(params: web::Json<TileRequest>) -> impl Responder {
 
     let return_data: Vec<(Vec<f64>, Vec<f64>, Vec<u32>)> = add_tile_v2(&pixels, &params.zoom_position, &params.zoom_position_covered, &params.bbox, params.units_per_meter);
 
-    println!("{:?}", return_data);
+    let mut response_body = Vec::new();
 
-    HttpResponse::Ok().body("hello from get Tile rust version WIP")
+    // First, write the number of tiles to the response body
+    response_body.write_u32::<LittleEndian>(return_data.len() as u32).unwrap();
+
+    for (zoom_pos, data, parent_zoom_pos) in return_data {
+        // Convert f64 data to f32 to reduce size while maintaining precision.
+        let data_f32: Vec<f32> = data.into_iter().map(|val| val as f32).collect();
+
+        let mut data_bytes = Vec::with_capacity(data_f32.len() * 4);
+        for &val in &data_f32 {
+            data_bytes.write_f32::<LittleEndian>(val).unwrap();
+        }
+
+        // Compress the f32 data using Gzip
+        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+        encoder.write_all(&data_bytes).unwrap();
+        let compressed_data = encoder.finish().unwrap();
+
+        // Create simplified metadata for this tile.
+        let metadata = serde_json::json!({
+            "zoom_pos": zoom_pos,
+            "parent_zoom_pos": parent_zoom_pos,
+            "data_length": data_f32.len() // The number of f32 values
+        });
+        let metadata_str = serde_json::to_string(&metadata).unwrap();
+        let metadata_bytes = metadata_str.as_bytes();
+
+        // Append the data for this tile to the response body using the same
+        // [length][data] format.
+        response_body.write_u32::<LittleEndian>(metadata_bytes.len() as u32).unwrap();
+        response_body.write_all(metadata_bytes).unwrap();
+
+        response_body.write_u32::<LittleEndian>(compressed_data.len() as u32).unwrap();
+        response_body.write_all(&compressed_data).unwrap();
+    }
+
+    HttpResponse::Ok()
+        .insert_header((header::CONTENT_TYPE, "application/octet-stream"))
+        .body(response_body)
 }

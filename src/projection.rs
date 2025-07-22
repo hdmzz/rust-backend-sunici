@@ -39,17 +39,15 @@ impl SphericalMercator {
             ac.push(size);
             size *= 2.0;
         }
-
         SphericalMercator { bc, cc, zc, ac }
     }
 
-    /// Convertit des coordonnées pixel (x, y) en coordonnées géographiques (longitude, latitude).
+    //version Rust de fonction sphericalMercator.ll de mapbox conertit  des coordonnées de pixel en longitude latitude
     pub fn ll(&self, px: (f64, f64), zoom: u8) -> (f64, f64) {
         const R2D: f64 = 180.0 / PI;
         let zoom_idx = zoom as usize;
 
         if zoom_idx >= MAX_ZOOM {
-            // Ou gérez l'erreur comme vous le souhaitez
             panic!("Zoom level {} is out of supported range [0, {})", zoom, MAX_ZOOM);
         }
 
